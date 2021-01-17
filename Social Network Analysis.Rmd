@@ -1,0 +1,65 @@
+---
+title: "Social Network Analysis"
+output: html_notebook
+---
+
+# 1. Library Preparation
+
+```{r Library}
+library(httr)
+library(RCurl)
+library(twitteR)
+library(syuzhet)
+```
+
+
+# 2. Credential Data
+
+```{r Credential Data}
+api_key <- "lfhvGrj9SODXVJHDUaS54Qrm2"
+api_secret <- "FwG4xppQwlhkbiVXQwmGDkswRQoKB4gvl8j6ooUlVq2CmQ6ZKh"
+access_token <- "292270204-YmIvLrybH0QoARQVXDtSmA1n7K6KlzUtaCx4xJqH"
+access_token_secret <- "3PFGXHOjrYCE6aTIpEsawLYAskPaNSAubB7236jkHhgWo"
+setup_twitter_oauth(api_key, api_secret, access_token, access_token_secret)
+```
+
+# 3. Posts Extraction
+
+```{r}
+tweets <- searchTwitter("#bobaucup", resultType="recent", n=10)
+#free account, last 7 days, n(max) = 10k
+tweets.df <- twListToDF(tweets)
+```
+
+# 4. Text Cleaning
+
+```{r}
+tweets.df$text <- gsub("&amp", "", tweets.df$text)
+tweets.df$text <- gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", tweets.df$text)
+tweets.df$text <- gsub("@\\w+", "", tweets.df$text)
+tweets.df$text <- gsub("[[:punct:]]", "", tweets.df$text)
+tweets.df$text <- gsub("[[:digit:]]", "", tweets.df$text)
+tweets.df$text <- gsub("http\\w+", "", tweets.df$text)
+tweets.df$text <- gsub("[ \t]{2,}", "", tweets.df$text)
+tweets.df$text <- gsub("^\\s+|\\s+$", "", tweets.df$text)
+tweets.df$text <- iconv(tweets.df$text, "UTF-8", "ASCII", sub="")
+```
+
+
+# 5. Do NLP to obtain Sentiment Analysis result
+
+```{r}
+emotions <- get_nrc_sentiment(tweets.df$text)
+emo_bar <- colSums(emotions)
+emo_sum <- data.frame(count=emo_bar, emotion=names(emo_bar))
+emo_sum$emotion <- factor(emo_sum$emotion,
+                          levels=emo_sum$emotion[order(emo_sum$count,
+                                                       decreasing = TRUE)])
+```
+
+# 6. Further Process
+
+```{r}
+result <- emo_sum[10, "count"] / (emo_sum[10, "count"] + emo_sum[9, "count"])
+print(result)
+```
